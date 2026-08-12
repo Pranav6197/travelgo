@@ -12,8 +12,7 @@
 		"install-frontend": "cd frontend && npm i",
 		"install-backend": "cd backend && npm i",
 		"installer": "npm i && npm run install-backend && npm run install-frontend",
-		"prepare": "husky install",
-		"postinstall": "node ./scripts/postInstall.mjs"
+		"prepare": "husky install"
 	},
 	"devDependencies": {
 		"baseline-browser-mapping": "^2.11.5",
