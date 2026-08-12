@@ -1,24 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import navigateBackBlackIcon from '@/assets/svg/navigate-back-black.svg';
-import navigateBackWhiteIcon from '@/assets/svg/navigate-back-white.svg';
-import ModalComponent from '@/components/modal';
-import CategoryPill from '@/components/category-pill';
-import { categories } from '@/utils/category-colors';
-import userState from '@/utils/user-state';
-import axiosInstance from '@/helpers/axios-instance';
-import { AxiosError, isAxiosError } from 'axios';
-import { useForm } from 'react-hook-form';
-import { formBlogSchema } from '@/lib/types';
-import { zodResolver } from '@hookform/resolvers/zod';
-import Post from '@/types/post-type';
-import useAuthData from '@/hooks/useAuthData';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import navigateBackBlackIcon from "@/assets/svg/navigate-back-black.svg";
+import navigateBackWhiteIcon from "@/assets/svg/navigate-back-white.svg";
+import ModalComponent from "@/components/modal";
+import CategoryPill from "@/components/category-pill";
+import { categories } from "@/utils/category-colors";
+import userState from "@/utils/user-state";
+import axiosInstance from "@/helpers/axios-instance";
+import { AxiosError, isAxiosError } from "axios";
+import { useForm } from "react-hook-form";
+import { formBlogSchema } from "@/lib/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import Post from "@/types/post-type";
+import useAuthData from "@/hooks/useAuthData";
 
 function FormBlog({ type, postId, post }) {
-  const [existingImages, setExistingImages] = useState(post?.images || (post?.imageLink ? [post.imageLink] : []));
+  const [existingImages, setExistingImages] = useState(
+    post?.images || (post?.imageLink ? [post.imageLink] : []),
+  );
   const [selectedFiles, setSelectedFiles] = useState(null);
+  const [enhancementRequested, setEnhancementRequested] = useState(false);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -37,11 +40,11 @@ function FormBlog({ type, postId, post }) {
   } = useForm({
     resolver: zodResolver(formBlogSchema),
     defaultValues: {
-      title: post?.title || '',
-      authorName: post?.authorName || '',
-      imageLink: post?.imageLink || '',
+      title: post?.title || "",
+      authorName: post?.authorName || "",
+      imageLink: post?.imageLink || "",
       categories: post?.categories || [],
-      description: post?.description || '',
+      description: post?.description || "",
       isFeaturedPost: false,
     },
   });
@@ -53,7 +56,9 @@ function FormBlog({ type, postId, post }) {
 
   //checks the length of the categories array and if the category is already selected
   const isValidCategory = (category) => {
-    return formData.categories.length >= 3 && !formData.categories.includes(category);
+    return (
+      formData.categories.length >= 3 && !formData.categories.includes(category)
+    );
   };
 
   const handleCategoryClick = (category) => {
@@ -61,74 +66,83 @@ function FormBlog({ type, postId, post }) {
 
     if (formData.categories.includes(category)) {
       setValue(
-        'categories',
-        formData.categories.filter((cat) => cat !== category)
+        "categories",
+        formData.categories.filter((cat) => cat !== category),
       );
     } else {
-      setValue('categories', [...formData.categories, category]);
+      setValue("categories", [...formData.categories, category]);
     }
-    trigger('categories');
+    trigger("categories");
   };
 
   const handleselector = () => {
-    setValue('imageLink', selectedImage);
+    setValue("imageLink", selectedImage);
     setmodal(false);
   };
   const handleCheckboxChange = () => {
-    setValue('isFeaturedPost', !formData.isFeaturedPost);
+    setValue("isFeaturedPost", !formData.isFeaturedPost);
   };
   const onSumbit = async (data) => {
     try {
       const submitData = new FormData();
-      submitData.append('title', data.title);
-      submitData.append('authorName', data.authorName);
-      submitData.append('description', data.description);
-      submitData.append('isFeaturedPost', data.isFeaturedPost);
+      submitData.append("title", data.title);
+      submitData.append("authorName", data.authorName);
+      submitData.append("description", data.description);
+      submitData.append("isFeaturedPost", data.isFeaturedPost);
+      submitData.append("enhancementRequested", enhancementRequested);
 
       // Append categories
-      data.categories.forEach(cat => submitData.append('categories', cat));
+      data.categories.forEach((cat) => submitData.append("categories", cat));
 
       // Append existing images
       if (existingImages.length > 0) {
         // Send as JSON string to handle array correctly on backend
-        submitData.append('existingImages', JSON.stringify(existingImages));
+        submitData.append("existingImages", JSON.stringify(existingImages));
       }
 
       // Append files
       if (selectedFiles) {
-        Array.from(selectedFiles).forEach(file => {
-          submitData.append('images', file);
+        Array.from(selectedFiles).forEach((file) => {
+          submitData.append("images", file);
         });
       } else if (data.imageLink && existingImages.length === 0) {
-        submitData.append('imageLink', data.imageLink);
+        submitData.append("imageLink", data.imageLink);
       }
 
       let postPromise;
-      if (type === 'new') {
-        postPromise = axiosInstance.post('/api/posts/', submitData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+      if (type === "new") {
+        postPromise = axiosInstance.post("/api/posts/", submitData, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
       }
 
-      if (type === 'edit' && postId) {
-        if (userData?.role === 'ADMIN') {
-          postPromise = axiosInstance.patch(`/api/posts/admin/${postId}`, submitData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+      if (type === "edit" && postId) {
+        if (userData?.role === "ADMIN") {
+          postPromise = axiosInstance.patch(
+            `/api/posts/admin/${postId}`,
+            submitData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            },
+          );
         } else {
-          postPromise = axiosInstance.patch(`/api/posts/${postId}`, submitData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          postPromise = axiosInstance.patch(
+            `/api/posts/${postId}`,
+            submitData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            },
+          );
         }
       }
       if (postPromise)
         toast.promise(postPromise, {
-          pending: 'Creating blog post...',
+          pending: "Creating blog post...",
           success: {
             render() {
               reset();
-              navigate('/');
-              return 'Blog created successfully';
+              navigate("/");
+              return "Blog created successfully";
             },
           },
           error: {
@@ -138,7 +152,7 @@ function FormBlog({ type, postId, post }) {
                   return data?.response?.data?.message;
                 }
               }
-              return 'Blog creation failed';
+              return "Blog creation failed";
             },
           },
         });
@@ -146,7 +160,7 @@ function FormBlog({ type, postId, post }) {
     } catch (error) {
       if (isAxiosError(error)) {
         if (error.response?.status === 401) {
-          navigate('/');
+          navigate("/");
           userState.removeUser();
         }
         console.error(error.response?.data?.message);
@@ -158,8 +172,8 @@ function FormBlog({ type, postId, post }) {
   const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(null);
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    setIsDarkMode(storedTheme === 'dark');
+    const storedTheme = localStorage.getItem("theme");
+    setIsDarkMode(storedTheme === "dark");
   }, []);
 
   function Asterisk() {
@@ -191,7 +205,7 @@ function FormBlog({ type, postId, post }) {
                 Is this a featured blog?
               </span>
               <input
-                {...register('isFeaturedPost')}
+                {...register("isFeaturedPost")}
                 type="checkbox"
                 className="ml-2 h-5 w-5 cursor-pointer rounded-full accent-purple-400"
                 checked={formData.isFeaturedPost}
@@ -205,7 +219,7 @@ function FormBlog({ type, postId, post }) {
               Blog title <Asterisk />
             </div>
             <input
-              {...register('title')}
+              {...register("title")}
               type="text"
               placeholder="Travel Bucket List for this Year"
               autoComplete="off"
@@ -222,7 +236,7 @@ function FormBlog({ type, postId, post }) {
               Blog content <Asterisk />
             </div>
             <textarea
-              {...register('description')}
+              {...register("description")}
               placeholder="Start writing here&hellip;"
               rows={5}
               className="dark:text-textInField w-full rounded-lg bg-slate-200 p-3 placeholder:text-sm placeholder:text-light-tertiary dark:bg-dark-field dark:text-dark-textColor dark:placeholder:text-dark-tertiary"
@@ -237,7 +251,7 @@ function FormBlog({ type, postId, post }) {
               Author name <Asterisk />
             </div>
             <input
-              {...register('authorName')}
+              {...register("authorName")}
               type="text"
               placeholder="Shree Sharma"
               className="dark:text-textInField mb-1 w-full rounded-lg bg-slate-200 p-3 placeholder:text-sm placeholder:text-light-tertiary dark:bg-dark-field dark:text-dark-textColor dark:placeholder:text-dark-tertiary"
@@ -261,7 +275,11 @@ function FormBlog({ type, postId, post }) {
             <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
               {existingImages.map((img, index) => (
                 <div key={index} className="relative group">
-                  <img src={img} alt={`Image ${index + 1}`} className="h-24 w-full rounded object-cover" />
+                  <img
+                    src={img}
+                    alt={`Image ${index + 1}`}
+                    className="h-24 w-full rounded object-cover"
+                  />
                   <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
@@ -290,7 +308,9 @@ function FormBlog({ type, postId, post }) {
                     )}
                   </div>
                   {index === 0 && (
-                    <span className="absolute left-1 top-1 rounded bg-green-500 px-1 text-xs text-white">Cover</span>
+                    <span className="absolute left-1 top-1 rounded bg-green-500 px-1 text-xs text-white">
+                      Cover
+                    </span>
                   )}
                 </div>
               ))}
@@ -307,11 +327,24 @@ function FormBlog({ type, postId, post }) {
                 className="dark:text-textInField w-full rounded-lg bg-slate-200 p-3 placeholder:text-sm placeholder:text-light-tertiary dark:bg-dark-field dark:text-dark-textColor dark:placeholder:text-dark-tertiary"
               />
             </div>
+            {selectedFiles && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-light-secondary dark:text-dark-secondary">
+                <input
+                  type="checkbox"
+                  checked={enhancementRequested}
+                  onChange={(event) =>
+                    setEnhancementRequested(event.target.checked)
+                  }
+                  className="h-4 w-4 accent-purple-400"
+                />
+                Enhance uploaded images in the background
+              </label>
+            )}
             <div className="text-xs text-gray-500">
               Or provide a link (optional if files selected):
             </div>
             <input
-              {...register('imageLink')}
+              {...register("imageLink")}
               type="url"
               placeholder="https://&hellip;"
               className="dark:text-textInField mt-1 w-full rounded-lg bg-slate-200 p-3 placeholder:text-sm placeholder:text-light-tertiary dark:bg-dark-field dark:text-dark-textColor dark:placeholder:text-dark-tertiary"
@@ -332,7 +365,10 @@ function FormBlog({ type, postId, post }) {
             <div>
               <div className="flex flex-wrap gap-3 rounded-lg p-2 dark:bg-dark-card dark:p-3">
                 {categories.map((category, index) => (
-                  <span key={`${category}-${index}`} onClick={() => handleCategoryClick(category)}>
+                  <span
+                    key={`${category}-${index}`}
+                    onClick={() => handleCategoryClick(category)}
+                  >
                     <CategoryPill
                       category={category}
                       selected={formData.categories.includes(category)}
@@ -352,10 +388,9 @@ function FormBlog({ type, postId, post }) {
             type="submit"
             className="active:scale-click flex w-full items-center justify-center rounded-lg bg-light-primary px-12 py-3 text-base font-semibold text-light hover:bg-light-primary/80 dark:bg-dark-primary dark:text-dark-card dark:hover:bg-dark-secondary/80 sm:mx-1 sm:w-fit"
           >
-            {type === 'new' ? 'Post Blog' : 'Update Blog'}
+            {type === "new" ? "Post Blog" : "Update Blog"}
           </button>
         </form>
-
       </div>
     </div>
   );
